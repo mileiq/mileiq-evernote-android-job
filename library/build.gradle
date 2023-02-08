@@ -47,6 +47,12 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    libraryVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "evernote-${variant.name}.aar"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -75,15 +81,58 @@ android {
         }
     }
 }
+def libraryGroupId = 'com.mobiledatalabs'
+def libraryArtifactId = 'evernote'
+def libraryVersion = '1.0.2'
+
+def githubProperties = new Properties()
+githubProperties.load(new FileInputStream(rootProject.file("local.properties")))
 
 afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
                 from components.release
-                groupId 'com.mobiledatalabs'
-                artifactId 'evernote'
-                version = '1.0.0'
+                groupId libraryGroupId
+                artifactId libraryArtifactId
+                version = libraryVersion
+            }
+        }
+
+
+        publications {
+            aar(MavenPublication) {
+                groupId libraryGroupId
+                version libraryVersion
+                artifactId libraryArtifactId
+                artifact("$buildDir/outputs/aar/${artifactId}-release.aar")
+
+                println "generating aar " + artifactId
+
+                // generate pom nodes for dependencies
+                pom.withXml {
+                    def dependenciesNode = asNode().appendNode('dependencies')
+                    println "dependencies" + configurations.releaseCompileClasspath
+
+                    configurations.releaseCompileClasspath.allDependencies.each {
+                        if (it.group != null && (it.name != null || "unspecified".equals(it.name)) && it.version != null) {
+                            def dependencyNode = dependenciesNode.appendNode('dependency')
+                            dependencyNode.appendNode('groupId', it.group)
+                            dependencyNode.appendNode('artifactId', it.name)
+                            dependencyNode.appendNode('version', it.version)
+                        }
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = "mileiq-evernote-android-job"
+                url 'https://maven.pkg.github.com/mileiq/mileiq-evernote-android-job'
+                credentials {
+                    username = githubProperties['gpr.usr'] ?: System.getenv("GPR_USER")
+                    password = githubProperties['gpr.key'] ?: System.getenv("GPR_API_KEY")
+                }
             }
         }
     }
