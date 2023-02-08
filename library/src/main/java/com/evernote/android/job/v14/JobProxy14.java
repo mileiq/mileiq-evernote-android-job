@@ -90,9 +90,8 @@ public class JobProxy14 implements JobProxy {
         long triggerAtMillis = getTriggerAtMillis(request);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(getType(true), triggerAtMillis, pendingIntent);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            alarmManager.setExact(getType(true), triggerAtMillis, pendingIntent);
-        } else {
+        }
+        else {
             alarmManager.set(getType(true), triggerAtMillis, pendingIntent);
         }
         logScheduled(request);
@@ -195,6 +194,10 @@ public class JobProxy14 implements JobProxy {
 
     protected PendingIntent getPendingIntent(int jobId, boolean exact, @Nullable Bundle transientExtras, int flags) {
         Intent intent = PlatformAlarmReceiver.createIntent(mContext, jobId, exact, transientExtras);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags = flags | PendingIntent.FLAG_MUTABLE;
+        }
 
         // repeating PendingIntent with service seams to have problems
         try {
