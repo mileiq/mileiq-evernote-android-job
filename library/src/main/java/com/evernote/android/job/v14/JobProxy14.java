@@ -28,6 +28,7 @@ import androidx.annotation.RestrictTo;
 import com.evernote.android.job.JobConfig;
 import com.evernote.android.job.JobProxy;
 import com.evernote.android.job.JobRequest;
+import com.evernote.android.job.PendingIntentUtil;
 import com.evernote.android.job.util.JobCat;
 import com.evernote.android.job.util.JobUtil;
 
@@ -90,9 +91,8 @@ public class JobProxy14 implements JobProxy {
         long triggerAtMillis = getTriggerAtMillis(request);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(getType(true), triggerAtMillis, pendingIntent);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            alarmManager.setExact(getType(true), triggerAtMillis, pendingIntent);
-        } else {
+        }
+        else {
             alarmManager.set(getType(true), triggerAtMillis, pendingIntent);
         }
         logScheduled(request);
@@ -173,7 +173,7 @@ public class JobProxy14 implements JobProxy {
 
     @Override
     public boolean isPlatformJobScheduled(JobRequest request) {
-        PendingIntent pendingIntent = getPendingIntent(request, PendingIntent.FLAG_NO_CREATE);
+        PendingIntent pendingIntent = getPendingIntent(request, PendingIntent.FLAG_NO_CREATE | PendingIntentUtil.flagImmutable());
         return pendingIntent != null;
     }
 
@@ -182,6 +182,7 @@ public class JobProxy14 implements JobProxy {
         if (!repeating) {
             flags |= PendingIntent.FLAG_ONE_SHOT;
         }
+        flags = flags | PendingIntentUtil.flagImmutable();
         return flags;
     }
 
@@ -198,7 +199,7 @@ public class JobProxy14 implements JobProxy {
 
         // repeating PendingIntent with service seams to have problems
         try {
-            return PendingIntent.getBroadcast(mContext, jobId, intent, flags);
+            return PendingIntent.getBroadcast(mContext, jobId, intent, flags | PendingIntentUtil.flagImmutable());
         } catch (Exception e) {
             // java.lang.SecurityException: Permission Denial: getIntentSender() from pid=31482, uid=10057,
             // (need uid=-1) is not allowed to send as package com.evernote
